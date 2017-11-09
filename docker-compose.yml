@@ -1,0 +1,6 @@
+version: "2"
+services:
+  web:
+    build: ./flask-app
+    ports: 
+      - "8888:8080" 
