@@ -1,6 +1,62 @@
-version: "2"
+version: '3'
 services:
-  web:
-    build: ./flask-app
-    ports: 
-      - "8888:8080" 
+  influxdb:
+    image: "influxdb:1.4"
+    #entrypoint: influxd /init-influxdb.sh
+    ports:
+     - "8086:8086"
+    volumes:
+     - influxdb:/var/lib/influxdb
+    networks:
+     - bigwave
+    environment:
+     - INFLUXDB_DB=jmeter
+
+  grafana:
+    image: "grafana/grafana"
+    ports:
+     - "3000:3000"
+    depends_on:
+     - influxdb
+    links:
+     - influxdb
+    networks:
+     - bigwave
+
+  #elasticsearch:
+   # image: "docker.elastic.co/elasticsearch/elasticsearch:6.0.0"
+    
+  jmeter:
+    build: ./jmeter
+    image: jmeter:3.3
+    entrypoint: "tail -f /dev/null"
+# jmeter.sh -n -t ./scripts/simple-test.jmx -j ./results/jmeter.log
+    depends_on:
+     - influxdb
+     - grafana
+    links:
+     - influxdb
+    volumes:
+     - /home/ubuntu/tsaurus/scripts:/opt/apache-jmeter-3.3/bin/scripts
+     - /home/ubuntu/tsaurus/results:/opt/apache-jmeter-3.3/bin/results
+    networks:
+     - bigwave
+
+  visualiser:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8080"
+    stop_grace_period: 1m30s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]  
+
+networks:
+  bigwave:
+
+volumes:
+  bigwave:
+  jmeter:
+  influxdb:
