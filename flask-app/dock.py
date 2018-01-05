@@ -86,7 +86,6 @@ class DockerHandler:
                                                    networks=['juggernaut'],
                                                    env=['INFLUXDB_DB=jmeter'],
                                                    labels={'app': 'juggernaut'}
-
                                                    )
         except APIError as e:
             print(e)
@@ -130,18 +129,19 @@ class DockerHandler:
         # TODO logstash is running
 
         try:
-            jmeter = self.client.services.create(image='jmeter:' + JMETER_TAG,
-                                                 name='jmeter',
-                                                 command='jmeter.sh -n -t ./scripts/' + script_file +
-                                                         ' -j ./results/jmeter.log',
-                                                 mounts=[SCRIPT_LOCATION + ':/opt/apache-jmeter-3.3/bin/scripts',
-                                                         RESULT_LOCATION + ':/opt/apache-jmeter-3.3/bin/results'],
-                                                 networks=['juggernaut'],
-                                                 labels={'app': 'juggernaut'},
-                                                 workdir='/opt/apache-jmeter-3.3/bin/',
-                                                 mode=ServiceMode(mode='replicated', replicas=replicas),
-                                                 update_config=UpdateConfig(parallelism=1, delay=60)
-                                                 )
+            jmeter = self.client.services.create(
+                image='jmeter:' + JMETER_TAG,
+                name='jmeter',
+                command='jmeter.sh -n -t ./scripts/' + script_file +
+                        ' -j ./results/jmeter.log',
+                mounts=[SCRIPT_LOCATION + ':/opt/apache-jmeter-3.3/bin/scripts',
+                        RESULT_LOCATION + ':/opt/apache-jmeter-3.3/bin/results'],
+                networks=['juggernaut'],
+                labels={'app': 'juggernaut'},
+                workdir='/opt/apache-jmeter-3.3/bin/',
+                mode=ServiceMode(mode='replicated', replicas=replicas),
+                update_config=UpdateConfig(parallelism=1, delay=60)
+            )
         except APIError as e:
             print(e)
         else:
@@ -152,12 +152,13 @@ class DockerHandler:
         try:
             elasticsearch = self.client.services.create(
                 image='docker.elastic.co/elasticsearch/elasticsearch-basic:6.1.1',
-                env=["discovery.type=single-node"],
+                env=["discovery.type=single-node",
+                     "ES_JAVA_OPTS=-Xms512m -Xmx512m",
+                     "bootstrap.memory_lock=true"],
                 name='elasticsearch',
                 # command='jmeter.sh -n -t ./scripts/' + script_file +
                 #         ' -j ./results/jmeter.log',
-                mounts=[SCRIPT_LOCATION + ':/opt/apache-jmeter-3.3/bin/scripts',
-                        RESULT_LOCATION + ':/opt/apache-jmeter-3.3/bin/results'],
+                mounts=['esdata1:/usr/share/elasticsearch/data'],
                 endpoint_spec=EndpointSpec(ports={9200: 9200,
                                                   9300: 9300}),
                 networks=['juggernaut'],
@@ -171,15 +172,64 @@ class DockerHandler:
         else:
             return elasticsearch
 
+    def create_kibana_service(self):
+
+        try:
+            kibana = self.client.services.create(
+                image='docker.elastic.co/kibana/kibana-oss:6.1.1',
+                # env=["discovery.type=single-node",
+                #      "ES_JAVA_OPTS=-Xms512m -Xmx512m",
+                #      "bootstrap.memory_lock=true"],
+                name='kibana',
+                # command='jmeter.sh -n -t ./scripts/' + script_file +
+                #         ' -j ./results/jmeter.log',
+                # mounts=['esdata1:/usr/share/elasticsearch/data'],
+                endpoint_spec=EndpointSpec(ports={80: 5601}),
+                networks=['juggernaut'],
+                labels={'app': 'juggernaut'},
+                # workdir='/opt/apache-jmeter-3.3/bin/',
+                # mode=ServiceMode(mode='replicated', replicas=replicas),
+                # update_config=UpdateConfig(parallelism=1, delay=60)
+            )
+        except APIError as e:
+            print(e)
+        else:
+            return kibana
+
+    def create_logstash_service(self):
+
+        try:
+            logstash = self.client.services.create(
+                image='docker.elastic.co/logstash/logstash-oss:6.1.1',
+                # env=["discovery.type=single-node",
+                #      "ES_JAVA_OPTS=-Xms512m -Xmx512m",
+                #      "bootstrap.memory_lock=true"],
+                name='kibana',
+                # command='jmeter.sh -n -t ./scripts/' + script_file +
+                #         ' -j ./results/jmeter.log',
+                # mounts=['esdata1:/usr/share/elasticsearch/data'],
+                endpoint_spec=EndpointSpec(ports={80: 5601}),
+                networks=['juggernaut'],
+                labels={'app': 'juggernaut'},
+                # workdir='/opt/apache-jmeter-3.3/bin/',
+                # mode=ServiceMode(mode='replicated', replicas=replicas),
+                # update_config=UpdateConfig(parallelism=1, delay=60)
+            )
+        except APIError as e:
+            print(e)
+        else:
+            return logstash
+
 
 if __name__ == "__main__":
     d = DockerHandler()
     d.print_all_containers()
-    d.create_networks()
+    # d.create_networks()
     # d.create_influxdb_service()
     # d.build_jmeter_image()
     # d.create_jmeter_service('simple-test.jmx', 2)
-    d.create_elasticsearch_service()
+    # d.create_elasticsearch_service()
+    # d.create_kibana_service()
     for x in d.client.services.list():
         print('---> ', x.attrs)
 

@@ -75,10 +75,9 @@ def reset_ingress():
         print(e)
 
 
-
 # reset_ingress()
 # start_instance()
-# stop_instance()
+stop_instance()
 print_instance_details()
 
 # print(ec2.describe_instance_status())
