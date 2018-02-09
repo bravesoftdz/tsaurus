@@ -29,8 +29,8 @@ services:
   jmeter:
     build: ./jmeter
     image: jmeter:3.3
-    entrypoint: "tail -f /dev/null"
-# jmeter.sh -n -t ./scripts/simple-test.jmx -j ./results/jmeter.log
+    # entrypoint: "tail -f /dev/null"
+    entrypoint: "jmeter.sh -n -t ./scripts/simple-test.jmx -Jthreads=100 -Jrampup=60 -j ./results/jmeter.log"
     depends_on:
      - influxdb
      - grafana
